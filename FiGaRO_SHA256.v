@@ -89,22 +89,22 @@ module FiGaRO_SHA3(
   parameter ADDR_BLOCK49   = 6'h31;
   parameter ADDR_BLOCK50   = 6'h32;
 
-  parameter ADDR_DIGEST0   = 6'h40;
-  parameter ADDR_DIGEST1   = 6'h41;
-  parameter ADDR_DIGEST2   = 6'h42;
-  parameter ADDR_DIGEST3   = 6'h43;
-  parameter ADDR_DIGEST4   = 6'h44;
-  parameter ADDR_DIGEST5   = 6'h45;
-  parameter ADDR_DIGEST6   = 6'h46;
-  parameter ADDR_DIGEST7   = 6'h47;
-  parameter ADDR_DIGEST8   = 6'h48;
-  parameter ADDR_DIGEST9   = 6'h49;
-  parameter ADDR_DIGESTA   = 6'h4a;
-  parameter ADDR_DIGESTB   = 6'h4b;
-  parameter ADDR_DIGESTC   = 6'h4c;
-  parameter ADDR_DIGESTD   = 6'h4d;
-  parameter ADDR_DIGESTE   = 6'h4e;
-  parameter ADDR_DIGESTF   = 6'h4f;
+  parameter ADDR_DIGEST0   = 8'h40;
+  parameter ADDR_DIGEST1   = 8'h41;
+  parameter ADDR_DIGEST2   = 8'h42;
+  parameter ADDR_DIGEST3   = 8'h43;
+  parameter ADDR_DIGEST4   = 8'h44;
+  parameter ADDR_DIGEST5   = 8'h45;
+  parameter ADDR_DIGEST6   = 8'h46;
+  parameter ADDR_DIGEST7   = 8'h47;
+  parameter ADDR_DIGEST8   = 8'h48;
+  parameter ADDR_DIGEST9   = 8'h49;
+  parameter ADDR_DIGESTA   = 8'h4a;
+  parameter ADDR_DIGESTB   = 8'h4b;
+  parameter ADDR_DIGESTC   = 8'h4c;
+  parameter ADDR_DIGESTD   = 8'h4d;
+  parameter ADDR_DIGESTE   = 8'h4e;
+  parameter ADDR_DIGESTF   = 8'h4f;
 
     
 localparam [3:0]
@@ -138,7 +138,7 @@ reg[5:0] generating_hash_counter;
 wire[10:0] writed_words_counter_wire; 
 wire nreset;
 
-reg[3:0] readed_words_counter; // zlicza słowa odczytane ze skrótu
+reg[4:0] readed_words_counter; // zlicza słowa odczytane ze skrótu
 
 reg          sha3_init;
 reg          sha3_next;
@@ -429,16 +429,22 @@ begin
 
          saving_hash: begin//9
             case(readed_words_counter)
-                4'h0 : begin sha3_address <= ADDR_DIGEST0; state <= saved_hash; end // zapisano wszystkie znaczące słowa
-                4'h1 : begin sha3_address <= ADDR_DIGEST1;  state <= saved_hash; end
-                4'h2 : begin sha3_address <= ADDR_DIGEST2;  state <= saved_hash; end
-                4'h3 : begin sha3_address <= ADDR_DIGEST3;  state <= saved_hash; end
-                4'h4 : begin sha3_address <= ADDR_DIGEST4;  state <= saved_hash; end
-                4'h5 : begin sha3_address <= ADDR_DIGEST5;  state <= saved_hash; end
-                4'h6 : begin sha3_address <= ADDR_DIGEST6;  state <= saved_hash; end
-                4'h7 : begin sha3_address <= ADDR_DIGEST7;  state <= saved_hash; end
-                4'h8 : state <= sending_data; // zapisano wszystkie znaczące słowa
-                4'h9 : state <= sending_data; // zapisano wszystkie znaczące słowa
+                5'h00 : begin sha3_address <= ADDR_DIGEST0; state <= saved_hash;  digest_data[31:0] <= sha3_dout;    end // zapisano wszystkie znaczące słowa
+                5'h01 : begin sha3_address <= ADDR_DIGEST1;  state <= saved_hash; digest_data[63:32] <= sha3_dout;   end
+                5'h02 : begin sha3_address <= ADDR_DIGEST2;  state <= saved_hash; digest_data[95:64] <= sha3_dout;   end
+                5'h03 : begin sha3_address <= ADDR_DIGEST3;  state <= saved_hash; digest_data[127:96] <= sha3_dout;  end
+                5'h04 : begin sha3_address <= ADDR_DIGEST4;  state <= saved_hash; digest_data[159:128] <= sha3_dout; end
+                5'h05 : begin sha3_address <= ADDR_DIGEST5;  state <= saved_hash; digest_data[191:160] <= sha3_dout; end
+                5'h06 : begin sha3_address <= ADDR_DIGEST6;  state <= saved_hash; digest_data[223:192] <= sha3_dout; end
+                5'h07 : begin sha3_address <= ADDR_DIGEST7;  state <= saved_hash; digest_data[255:224] <= sha3_dout; end
+                5'h08 : begin sha3_address <= ADDR_DIGEST8;  state <= saved_hash; digest_data[287:256] <= sha3_dout; end
+                5'h09 : begin sha3_address <= ADDR_DIGEST9;  state <= saved_hash; digest_data[319:288] <= sha3_dout; end            
+                5'h0A : begin sha3_address <= ADDR_DIGESTA;  state <= saved_hash; digest_data[351:320] <= sha3_dout; end
+                5'h0B : begin sha3_address <= ADDR_DIGESTB;  state <= saved_hash; digest_data[383:352] <= sha3_dout; end
+                5'h0C : begin sha3_address <= ADDR_DIGESTC;  state <= saved_hash; digest_data[415:384] <= sha3_dout; end
+                5'h0D : begin sha3_address <= ADDR_DIGESTD;  state <= saved_hash; digest_data[447:416] <= sha3_dout; end
+                5'h0E : begin sha3_address <= ADDR_DIGESTE;  state <= saved_hash; digest_data[479:448] <= sha3_dout; end
+                5'h0F : begin sha3_address <= ADDR_DIGESTF;  state <= saved_hash; digest_data[511:480] <= sha3_dout; end 
                 default : sha3_address <= ADDR_DIGEST0;
             endcase
             sha3_we = 1;
@@ -446,22 +452,22 @@ begin
          
          saved_hash: begin//10
             case(readed_words_counter)
-                4'h0 : begin digest_data[31:0] <= sha3_dout; end
-                4'h1 : begin digest_data[63:32] <= sha3_dout; end
-                4'h2 : begin digest_data[95:64] <= sha3_dout; end
-                4'h3 : begin digest_data[127:96] <= sha3_dout; end
-                4'h4 : begin digest_data[159:128] <= sha3_dout; end
-                4'h5 : begin digest_data[191:160] <= sha3_dout;end
-                4'h6 : begin digest_data[223:192] <= sha3_dout; end
-                4'h7 : begin digest_data[255:224] <= sha3_dout; end
-                4'h8 : begin digest_data[287:256] <= sha3_dout; end
-                4'h9 : begin digest_data[319:288] <= sha3_dout; end
-                4'hA : begin digest_data[351:320] <= sha3_dout; end
-                4'hB : begin digest_data[383:352] <= sha3_dout; end
-                4'hC : begin digest_data[415:384] <= sha3_dout; end
-                4'hD : begin digest_data[447:416] <= sha3_dout; end
-                4'hE : begin digest_data[479:448] <= sha3_dout; end
-                4'hF : begin digest_data[511:480] <= sha3_dout; end
+                5'h00 : begin digest_data[31:0] <= sha3_dout; end
+                5'h01 : begin digest_data[63:32] <= sha3_dout; end
+                5'h02 : begin digest_data[95:64] <= sha3_dout; end
+                5'h03 : begin digest_data[127:96] <= sha3_dout; end
+                5'h04 : begin digest_data[159:128] <= sha3_dout; end
+                5'h05 : begin digest_data[191:160] <= sha3_dout;end
+                5'h06 : begin digest_data[223:192] <= sha3_dout; end
+                5'h07 : begin digest_data[255:224] <= sha3_dout; end
+                5'h08 : begin digest_data[287:256] <= sha3_dout; end
+                5'h09 : begin digest_data[319:288] <= sha3_dout; end
+                5'h0A : begin digest_data[351:320] <= sha3_dout; end
+                5'h0B : begin digest_data[383:352] <= sha3_dout; end
+                5'h0C : begin digest_data[415:384] <= sha3_dout; end
+                5'h0D : begin digest_data[447:416] <= sha3_dout; end
+                5'h0E : begin digest_data[479:448] <= sha3_dout; end
+                5'h0F : begin digest_data[511:480] <= sha3_dout; end
                 default : digest_data[31:0] <= sha3_dout;
             endcase
             sha3_we = 0;
@@ -470,11 +476,20 @@ begin
          
          increment_counter : begin
             readed_words_counter = readed_words_counter + 1;
-            state <= saving_hash;
+            if(readed_words_counter < 5'h10)
+            begin
+                state <= saving_hash;
+            end
+            //wszystkie słowa zostały zapisane
+            if(readed_words_counter == 5'h10)
+            begin
+                state <= sending_data;
+            end
          end
          
          sending_data: begin
             ready <= 1;
+            readed_words_counter <= 5'h00;
             case(ADDR)
                 11'h000 :  DATA_OUT <= random_bits[31:0];
                 11'h001 :  DATA_OUT <= random_bits[63:32];
