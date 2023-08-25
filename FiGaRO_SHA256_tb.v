@@ -55,7 +55,7 @@ module FiGaRO_SHA3_tb();
   //----------------------------------------------------------------
   // Device Under Test.
   //----------------------------------------------------------------
-  FiGaRO_SHA3 dut(
+  FiGaRO_SHA2_512 dut(
             .reset(tb_reset),
             .enable(tb_enable),
             .clk(tb_clk),

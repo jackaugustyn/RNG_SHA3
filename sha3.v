@@ -45,7 +45,7 @@
 
 module sha3(    input wire          clk,
                 input wire 	     nreset,
-                input wire 	     w,
+                input wire 	     we,
                 input wire [ 8:2]    addr,
                 input wire [32-1:0]  din,
                 output wire [32-1:0] dout,
@@ -204,7 +204,7 @@ module sha3(    input wire          clk,
 
         end
 
-        if (w)
+        if (we)
           //
           case (addr[2])
             1: blk[addr[7:3]][63:32] <= din_swap;
