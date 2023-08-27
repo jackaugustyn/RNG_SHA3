@@ -1,7 +1,7 @@
 `default_nettype wire
 //////////////////////////////////////////////////////////////////////////////////
 // Company: DKWOC
-// Engineer: Paweł Augustynowicz
+// Engineer: P. J. Augustynowicz
 // 
 // Create Date: 02/27/2023 01:46:18 PM
 // Design Name: 
@@ -32,10 +32,10 @@ module FiGaRO_SHA2_512(
   parameter SAMPLE_SIZE = 32768;
   parameter CHUNK_SIZE = 1024;
   parameter NUMBER_OF_WORDS_SHA2 = CHUNK_SIZE / 32;
-  //32767 / 576 = 56 bloków pełnych i 512 bitów w ostatnim;
+  //32767 / 576 = 56 blokow pelnych i 512 bitow w ostatnim;
   parameter NUMBER_OF_BLOCKS = SAMPLE_SIZE % CHUNK_SIZE == 0 ? (SAMPLE_SIZE / CHUNK_SIZE) + 1 : (SAMPLE_SIZE / CHUNK_SIZE);
   
-  //Adresy kolejnych bloków danych do zapisu
+  //Adresy kolejnych blokow danych do zapisu
   parameter ADDR_BLOCK0          = 8'h10;
   parameter ADDR_BLOCK1          = 8'h11;
   parameter ADDR_BLOCK2          = 8'h12;
@@ -104,35 +104,29 @@ localparam [3:0]
     data_sended             = 4'b1101,
     zeroing                 = 4'b1110;
 
-//zmienna przechowująca aktualny stan maszyny stanów
+//maska wyboru �r�d�a losowo�ci
+reg[4:0] mask;
+//zmienna przechowujaca aktualny stan maszyny stanow
 reg[3:0] state;
-//zapisywanie trwa 2 takty, do rozróżnienia, czy to pierwszy czy drugi takt
+//zapisywanie trwa 2 takty, do rozroznienia, czy to pierwszy czy drugi takt
 reg first_beat;
-//dane zawarte są w 64 blokach po 512 bitów (512 * 54 = 32768) plus 1 blok na padding
+//dane zawarte sa w 64 blokach po 512 bitow (512 * 54 = 32768) plus 1 blok na padding
 reg[6:0] block_number;
 
-//dane generowane są w paczkach po 512 bitów
+//dane generowane sa w paczkach po 512 bitow
 reg[1023:0] random_bits;
-//licznik, ile bitów z 32768 już wygenerowano;
+//licznik, ile bitow z 32768 juz wygenerowano;
 reg[16:0] generated_bits_counter;
 
-//<! Licznik zapisanych do funkcji skrótu słów
+//<! Licznik zapisanych do funkcji skrotu slow
 reg[10:0] writed_words_counter;
 
-//<! Licznik taktów oczekiwania na przetworzenie skrótu
+//<! Licznik taktow oczekiwania na przetworzenie skrotu
 reg[7:0] generating_hash_counter;
 
 wire nreset;
 
-reg[4:0] readed_words_counter; // zlicza słowa odczytane ze skrótu
-
-//reg          sha3_init;
-//reg          sha3_next;
-//wire          sha3_ready;
-//reg          sha3_we;
-//reg[7 : 0]   sha3_address;
-//reg[31 : 0]  sha3_din;
-//wire[31 : 0]  sha3_dout;
+reg[4:0] readed_words_counter; // zlicza slowa odczytane ze skrotu
 
 reg sha2_cs;
 reg sha2_we;
@@ -155,21 +149,17 @@ FiGaRO generator5(.clk(clk), .dff_en(enable), .en(enable), .random_out(gen5_out)
 FiGaRO generator6(.clk(clk), .dff_en(enable), .en(enable), .random_out(gen6_out));
 FiGaRO generator7(.clk(clk), .dff_en(enable), .en(enable), .random_out(gen7_out));
 FiGaRO generator8(.clk(clk), .dff_en(enable), .en(enable), .random_out(gen8_out));
-assign random_out = gen1_out  ^ gen2_out ^ gen3_out ^ gen4_out ^ gen5_out ^ gen6_out ^ gen7_out ^ gen8_out;
-//tutaj w zależności od dodatkowego parametru dajemy różne wyjścia:
 
-//SHA3 
-//sha3 sha3_(
-//           .clk(clk),
-//           .nreset(nreset),
-//           .we(sha3_we),
-//           .addr(sha3_address),
-//           .din(sha3_din),
-//           .dout(sha3_dout),
-//           .init(sha3_init),
-//           .next(sha3_next),
-//           .ready(sha3_ready)
-//           );
+assign random_out = (mask == 1) ? gen1_out : 
+                    (mask == 2) ? gen2_out : 
+                    (mask == 3) ? gen3_out :
+                    (mask == 4) ? gen4_out :
+                    (mask == 5) ? gen5_out :
+                    (mask == 6) ? gen6_out :
+                    (mask == 7) ? gen7_out :
+                    (mask == 8) ? gen8_out :
+                    gen1_out  ^ gen2_out ^ gen3_out ^ gen4_out ^ gen5_out ^ gen6_out ^ gen7_out ^ gen8_out;
+//tutaj w zaleznosci od dodatkowego parametru dajemy rozne wyjscia:
 
 assign nreset = !reset;
 
@@ -186,13 +176,13 @@ sha512 sha2_(
 
 
 
-//MASZYNA STANÓW
+//MASZYNA STANoW
 //PRZEBIEG GENERACJI:
-//1. ROZPOCZĘCIE PROCESU: -> starting
-//2. GENERACJA 576 bitów 
-//3. UPDATE FUNKCJI SKRÓTU
+//1. ROZPOCZECIE PROCESU: -> starting
+//2. GENERACJA 576 bitow 
+//3. UPDATE FUNKCJI SKROTU
 // 3.1 Dla pierwszego bloku
-// 3.2 Dla kolejnych bloków
+// 3.2 Dla kolejnych blokow
 // 3.3 Dla ostatniego bloku
 //4. STAN ODBIORU ADDR
 // 4.1 Gdy dane odebrane, generujemy kolejny blok
@@ -208,6 +198,7 @@ begin
         writed_words_counter = 0;
         readed_words_counter = 0;
         
+        mask = 0;
         sha2_cs = 0;
         sha2_we  = 0;
         sha2_address = 0;
@@ -371,7 +362,7 @@ begin
             sha2_we <= 1;
             sha2_cs <= 1;
             
-            //if od zakończenia do wyliczenia skrótu
+            //if od zakonczenia do wyliczenia skrótu
 //            if(block_number  == 0 && writed_words_counter  == NUMBER_OF_WORDS_SHA3INIT)
 //            begin
 //                state <= writed_to_sha;
@@ -398,7 +389,7 @@ begin
          begin//dane zapisane ////4
             if(first_beat == 0)
             begin
-                sha2_we <= 0;//opuszczenie flag zapisania do wewnętrznego rejestru
+                sha2_we <= 0;//opuszczenie flag zapisania do wewnetrznego rejestru
                 sha2_cs <= 0;
                 sha2_address <= 8'h08;
                 sha2_din  <= 32'h0000000d;
@@ -413,7 +404,7 @@ begin
          end
          
          generating_hash: 
-         begin//przeliczania po zapisaniu 512 bitów//5
+         begin//przeliczania po zapisaniu 512 bitow//5
             first_beat <= 0;
             sha2_cs <= 1;
             sha2_address <= 8'h09;
@@ -428,7 +419,7 @@ begin
          
          hash_generated: begin///6
             //TODO! WIELKI IF
-            //stąd można przejść do odbioru danych, bądź generacji ostatecznego hasha
+            //stad mozna przejsc do odbioru danych, badz generacji ostatecznego hasha
             block_number <= block_number + 1;
             if(block_number < NUMBER_OF_BLOCKS)
             begin
@@ -531,7 +522,18 @@ begin
                 11'h00e :  DATA_OUT <= random_bits[479:448];
                 11'h00f :  DATA_OUT <= random_bits[511:480];
                 
-                //ODCZYTYWANIE SKRÓTU
+                //BADANIE ENTROPII
+                11'h100 :  mask <= 0;
+                11'h101 :  mask <= 1;
+                11'h102 :  mask <= 2;
+                11'h103 :  mask <= 3;
+                11'h104 :  mask <= 4;
+                11'h105 :  mask <= 5;
+                11'h106 :  mask <= 6;
+                11'h107 :  mask <= 7;
+                11'h108 :  mask <= 8;
+                
+                //ODCZYTYWANIE SKROTU
                 11'h400 :  DATA_OUT <= digest_data[31:0];
                 11'h401 :  DATA_OUT <= digest_data[63:32];
                 11'h402 :  DATA_OUT <= digest_data[91:64];
@@ -549,10 +551,10 @@ begin
                 11'h40e :  DATA_OUT <= digest_data[479:448];
                 11'h40f :  DATA_OUT <= digest_data[511:480];
                 
-                //ODCZYTAŁEM SKRÓT I DANE, ZABAWA OD ADDR
+                //ODCZYTALEM SKROT I DANE, ZABAWA OD ADDR
                 11'h3FF : state <= zeroing ;
                 
-                //ODCZYTAŁEM DANE, PRZECHODZĘ W STAN POCŻĄTKOWY STARTING
+                //ODCZYTALEM DANE, PRZECHODZE W STAN POCZATKOWY STARTING
                 11'h7ff :  state <= data_sended;
                 
                 default :  DATA_OUT <= random_bits[31:0];
