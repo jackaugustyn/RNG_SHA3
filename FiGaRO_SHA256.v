@@ -104,7 +104,11 @@ localparam [3:0]
     data_sended             = 4'b1101,
     zeroing                 = 4'b1110;
 
-//maska wyboru �r�d�a losowo�ci
+//rejestry i kable do logiki testów żywotności
+reg health_tests_failed;
+wire RepetitionCountTestFailed;
+wire AdaptiveProportionTestFailed;
+//maska wyboru zrodla losowosci
 reg[4:0] mask;
 //zmienna przechowujaca aktualny stan maszyny stanow
 reg[3:0] state;
@@ -149,6 +153,12 @@ FiGaRO generator5(.clk(clk), .dff_en(enable), .en(enable), .random_out(gen5_out)
 FiGaRO generator6(.clk(clk), .dff_en(enable), .en(enable), .random_out(gen6_out));
 FiGaRO generator7(.clk(clk), .dff_en(enable), .en(enable), .random_out(gen7_out));
 FiGaRO generator8(.clk(clk), .dff_en(enable), .en(enable), .random_out(gen8_out));
+
+
+AdaptiveProportionTest APT(.random_bits(random_out), .index_of_last_bit(generated_bits_counter[9:0]), .failure(AdaptiveProportionTestFailed));
+RepetitionCountTest RCT(.random_bits(random_out), .index_of_last_bit(generated_bits_counter[9:0]), .failure(RepetitionCountTestFailed));
+
+//assign health_tests_failed = (health_tests_failed == 0) ?  AdaptiveProportionTestFailed || RepetitionCountTestFailed : 1; 
 
 assign random_out = (mask == 1) ? gen1_out : 
                     (mask == 2) ? gen2_out : 
@@ -198,6 +208,7 @@ begin
         writed_words_counter = 0;
         readed_words_counter = 0;
         
+        health_tests_failed = 0;
         mask = 0;
         sha2_cs = 0;
         sha2_we  = 0;
@@ -214,6 +225,7 @@ begin
             writed_words_counter = 0;
             readed_words_counter = 0;
         
+            health_tests_failed = 0;
             sha2_cs = 0;
             sha2_we  = 0;
             sha2_address = 0;
@@ -227,6 +239,10 @@ begin
             begin
                 random_bits[generated_bits_counter] <= random_out;
                 generated_bits_counter <= generated_bits_counter + 1;
+                if(generated_bits_counter >= 1023)
+                begin
+                    health_tests_failed <= AdaptiveProportionTestFailed || RepetitionCountTestFailed || health_tests_failed;
+                end
             end
             if(generated_bits_counter == CHUNK_SIZE)
             begin
@@ -280,7 +296,7 @@ begin
                 default : sha2_address <= ADDR_BLOCK0;
             endcase 
             
-            //32768 po 512 bitów absorbowanych naraz plus 1 blok na padding
+            //32768 po 512 bitÃ³w absorbowanych naraz plus 1 blok na padding
             if(block_number < NUMBER_OF_BLOCKS - 1 )
             begin
                 case(writed_words_counter)
@@ -320,7 +336,7 @@ begin
                     default :  sha2_din <= 0; 
                 endcase
             end
-            else if(block_number == NUMBER_OF_BLOCKS - 1)// ostatni blok, wymagający paddingu
+            else if(block_number == NUMBER_OF_BLOCKS - 1)// ostatni blok, wymagajÄcy paddingu
             begin
                 case(writed_words_counter)
                     10'h000 :  sha2_din <= 32'h80000000;
@@ -362,7 +378,7 @@ begin
             sha2_we <= 1;
             sha2_cs <= 1;
             
-            //if od zakonczenia do wyliczenia skrótu
+            //if od zakonczenia do wyliczenia skrÃ³tu
 //            if(block_number  == 0 && writed_words_counter  == NUMBER_OF_WORDS_SHA3INIT)
 //            begin
 //                state <= writed_to_sha;
@@ -442,7 +458,7 @@ begin
 
          saving_hash: begin//9
             case(readed_words_counter)
-                5'h00 : begin sha2_address <= ADDR_DIGEST0;  state <= saved_hash; digest_data[31:0]    <= sha2_dout; end // zapisano wszystkie znaczące słowa
+                5'h00 : begin sha2_address <= ADDR_DIGEST0;  state <= saved_hash; digest_data[31:0]    <= sha2_dout; end // zapisano wszystkie znaczÄce sÅowa
                 5'h01 : begin sha2_address <= ADDR_DIGEST1;  state <= saved_hash; digest_data[63:32]   <= sha2_dout; end
                 5'h02 : begin sha2_address <= ADDR_DIGEST2;  state <= saved_hash; digest_data[95:64]   <= sha2_dout; end
                 5'h03 : begin sha2_address <= ADDR_DIGEST3;  state <= saved_hash; digest_data[127:96]  <= sha2_dout; end
@@ -489,12 +505,12 @@ begin
          
          increment_counter : begin
             readed_words_counter = readed_words_counter + 1;
-            //jeśli nie wszystkie słowa zostały zapisane:
+            //jeÅli nie wszystkie sÅowa zostaÅy zapisane:
             if(readed_words_counter < 5'h10)
             begin
                 state <= saving_hash;
             end
-            //wszystkie słowa zostały zapisane
+            //wszystkie sÅowa zostaÅy zapisane
             if(readed_words_counter == 5'h10)
             begin
                 state <= sending_data;
@@ -521,6 +537,22 @@ begin
                 11'h00d :  DATA_OUT <= random_bits[447:416];
                 11'h00e :  DATA_OUT <= random_bits[479:448];
                 11'h00f :  DATA_OUT <= random_bits[511:480];
+                11'h010 :  DATA_OUT <= random_bits[543:512];
+                11'h011 :  DATA_OUT <= random_bits[575:544];
+                10'h012 :  DATA_OUT <= random_bits[607:576];
+                10'h013 :  DATA_OUT <= random_bits[639:608];
+                10'h014 :  DATA_OUT <= random_bits[671:640];
+                10'h015 :  DATA_OUT <= random_bits[703:672];
+                10'h016 :  DATA_OUT <= random_bits[735:704];
+                10'h017 :  DATA_OUT <= random_bits[767:736];
+                10'h018 :  DATA_OUT <= random_bits[799:768];
+                10'h019 :  DATA_OUT <= random_bits[831:800];
+                10'h01a :  DATA_OUT <= random_bits[863:832];
+                10'h01b :  DATA_OUT <= random_bits[895:864];
+                10'h01c :  DATA_OUT <= random_bits[927:896];
+                10'h01d :  DATA_OUT <= random_bits[959:928];
+                10'h01e :  DATA_OUT <= random_bits[991:960];
+                10'h01f :  DATA_OUT <= random_bits[1023:992];
                 
                 //BADANIE ENTROPII
                 11'h100 :  mask <= 0;
@@ -533,23 +565,26 @@ begin
                 11'h107 :  mask <= 7;
                 11'h108 :  mask <= 8;
                 
+                //SPRAWDZENIE STANU HEALTH TESTÓW:
+                11'h201 : DATA_OUT <= {31'h0, health_tests_failed};
+                
                 //ODCZYTYWANIE SKROTU
-                11'h400 :  DATA_OUT <= digest_data[31:0];
-                11'h401 :  DATA_OUT <= digest_data[63:32];
-                11'h402 :  DATA_OUT <= digest_data[91:64];
-                11'h403 :  DATA_OUT <= digest_data[127:96];
-                11'h404 :  DATA_OUT <= digest_data[159:128];
-                11'h405 :  DATA_OUT <= digest_data[191:160];
-                11'h406 :  DATA_OUT <= digest_data[223:192];
-                11'h407 :  DATA_OUT <= digest_data[255:224];
-                11'h408 :  DATA_OUT <= digest_data[287:256];
-                11'h409 :  DATA_OUT <= digest_data[319:288];
-                11'h40a :  DATA_OUT <= digest_data[351:320];
-                11'h40b :  DATA_OUT <= digest_data[383:352];
-                11'h40c :  DATA_OUT <= digest_data[415:384];
-                11'h40d :  DATA_OUT <= digest_data[447:416];
-                11'h40e :  DATA_OUT <= digest_data[479:448];
-                11'h40f :  DATA_OUT <= digest_data[511:480];
+                11'h400 :  DATA_OUT <= (health_tests_failed) ? 0 : digest_data[31:0];
+                11'h401 :  DATA_OUT <= (health_tests_failed) ? 0 : digest_data[63:32];
+                11'h402 :  DATA_OUT <= (health_tests_failed) ? 0 : digest_data[91:64];
+                11'h403 :  DATA_OUT <= (health_tests_failed) ? 0 : digest_data[127:96];
+                11'h404 :  DATA_OUT <= (health_tests_failed) ? 0 : digest_data[159:128];
+                11'h405 :  DATA_OUT <= (health_tests_failed) ? 0 : digest_data[191:160];
+                11'h406 :  DATA_OUT <= (health_tests_failed) ? 0 : digest_data[223:192];
+                11'h407 :  DATA_OUT <= (health_tests_failed) ? 0 : digest_data[255:224];
+                11'h408 :  DATA_OUT <= (health_tests_failed) ? 0 : digest_data[287:256];
+                11'h409 :  DATA_OUT <= (health_tests_failed) ? 0 : digest_data[319:288];
+                11'h40a :  DATA_OUT <= (health_tests_failed) ? 0 : digest_data[351:320];
+                11'h40b :  DATA_OUT <= (health_tests_failed) ? 0 : digest_data[383:352];
+                11'h40c :  DATA_OUT <= (health_tests_failed) ? 0 : digest_data[415:384];
+                11'h40d :  DATA_OUT <= (health_tests_failed) ? 0 : digest_data[447:416];
+                11'h40e :  DATA_OUT <= (health_tests_failed) ? 0 : digest_data[479:448];
+                11'h40f :  DATA_OUT <= (health_tests_failed) ? 0 : digest_data[511:480];
                 
                 //ODCZYTALEM SKROT I DANE, ZABAWA OD ADDR
                 11'h3FF : state <= zeroing ;
